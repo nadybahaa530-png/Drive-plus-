@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drive Plus Application</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #334155;
+        }
+        #app-container {
+            width: 100%;
+            max-width: 450px;
+            height: 92vh;
+            background-color: #f8fafc;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border: 8px solid #1e293b;
+        }
+        .screen {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            padding: 24px;
+            overflow-y: auto;
+            background-color: #f8fafc;
+        }
+        .btn-primary {
+            background-color: #0a84ff;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.2);
+        }
+        .btn-primary:hover {
+            background-color: #0066cc;
+        }
+        .btn-outline {
+            background-color: transparent;
+            color: #0a84ff;
+            border: 2px solid #0a84ff;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+        }
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 12px;
+            background-color: white;
+            color: #1e293b;
+            outline: none;
+        }
+        .input-field:focus {
+            border-color: #0a84ff;
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+        }
+        .input-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+            display: block;
+        }
+        /* أنيميشن الخريطة */
+        .map-bg {
+            background: #e0f2fe;
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+        }
+        .map-road {
+            position: absolute;
+            background: #cbd5e1;
+        }
+        .car-icon {
+            position: absolute;
+            font-size: 20px;
+            animation: moveCar 6s linear infinite;
+        }
+        @keyframes moveCar {
+            0% { top: 20%; right: -10%; transform: rotate(0deg); }
+            45% { top: 20%; right: 50%; transform: rotate(0deg); }
+            50% { top: 20%; right: 50%; transform: rotate(90deg); }
+            80% { top: 70%; right: 50%; transform: rotate(90deg); }
+            85% { top: 70%; right: 50%; transform: rotate(180deg); }
+            100% { top: 70%; right: 110%; transform: rotate(180deg); }
+        }
+        /* ستيل بطاقات الركاب والسائقين */
+        .card-selection {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .card-selection.active {
+            border-color: #0a84ff;
+            background-color: #f0f7ff;
+        }
+        .pay-option {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            background: white;
+        }
+        .pay-option.selected {
+            border-color: #0a84ff;
+            background-color: #f0f7ff;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container"></div>
+
+<script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function DrivePlusApp() {
+        // الشاشات: user-type, passenger-login, passenger-home, driver-register, driver-trial, driver-pay, driver-home, search-ride
+        const [screen, setScreen] = useState('user-type');
+        const [phone, setPhone] = useState('');
+        
+        // بيانات السائق
+        const [driverName, setDriverName] = useState('');
+        const [carModel, setCarModel] = useState('');
+        const [carYear, setCarYear] = useState('2015');
+        const [carColor, setCarColor] = useState('');
+        const [license, setLicense] = useState('');
+        
+        // الدفع والاشتراك
+        const [selectedWallet, setSelectedWallet] = useState('vodafone');
+        const [transactionId, setTransactionId] = useState('');
+        
+        // تفاصيل المشوار
+        const [pickup, setPickup] = useState('جامعة المنيا');
+        const [dropoff, setDropoff] = useState('محطة أبو قرقاص');
+        const [rideType, setRideType] = useState('economy');
+        const [paymentMethod, setPaymentMethod] = useState('كاش');
+        const [searchStatus, setSearchStatus] = useState(0);
+
+        const targetNumber = "01225769976";
+
+        const validateEgyptianPhone = (p) => /^01[0125][0-9]{8}$/.test(p.trim());
+
+        const handlePassengerSubmit = (e) => {
+            e.preventDefault();
+            if(validateEgyptianPhone(phone)) {
+                setScreen('passenger-home');
+            } else {
+                alert('برجاء إدخال رقم هاتف مصري صحيح مكون من 11 رقماً ويبدأ بـ 01');
+            }
+        };
+
+        const handleDriverRegisterSubmit = (e) => {
+            e.preventDefault();
+            if(!driverName || !carModel || !carColor || !license) {
+                alert('يرجى ملء جميع البيانات الشخصية وبيانات المركبة والرخصة');
+                return;
+            }
+            if(!validateEgyptianPhone(phone)) {
+                alert('برجاء إدخال رقم هاتف مصري صحيح للسائق');
+                return;
+            }
+            // ينتقل لفترة الـ 15 يوماً المجانية المخصصة للسائقين الجدد
+            setScreen('driver-trial');
+        };
+
+        const handlePaymentSubmit = (e) => {
+            e.preventDefault();
+            if(transactionId.trim().length < 11) {
+                alert('خطأ في التحقق: يرجى كتابة رقم عملية الدفع أو رقم المحفظة المحول منها المكون من 11 رقماً بشكل صحيح لتوثيق العملية!');
+                return;
+            }
+            alert('تم إرسال بيانات الدفع بنجاح ومطابقتها برقمك الموحد. تم تفعيل الحساب شهرياً!');
+            setScreen('driver-home');
+        };
+
+        return (
+            <div style={{height: '100%', display: 'flex', flexDirection: 'column'}}>
+                
+                {/* --- شاشة اختيار نوع الحساب --- */}
+                {screen === 'user-type' && (
+                    <div class="screen" style={{justifyContent: 'center'}}>
+                        <div style={{textAlign: 'center', marginBottom: '40px'}}>
+                            <h1 style={{color: '#0a84ff', fontSize: '36px', fontWeight: '800'}}>Drive Plus</h1>
+                            <p style={{color: '#64748b', marginTop: '5px'}}>اختر نوع حسابك للاستمرار</p>
+                        </div>
+
+                        <div class="card-selection" onClick={() => setScreen('passenger-login')}>
+                            <div style={{fontSize: '32px'}}>👤</div>
+                            <div>
+                                <h3 style={{color: '#1e293b'}}>أنا راكب</h3>
+                                <p style={{color: '#64748b', fontSize: '13px', marginTop: '2px'}}>احجز رحلاتك مجاناً مدى الحياة وبأعلى أمان</p>
+                            </div>
+                        </div>
+
+                        <div class="card-selection" onClick={() => setScreen('driver-register')}>
+                            <div style={{fontSize: '32px'}}>🚗</div>
+                            <div>
+                                <h3 style={{color: '#1e293b'}}>أنا سائق (كابتن)</h3>
+                                <p style={{color: '#64748b', fontSize: '13px', marginTop: '2px'}}>استقبل طلبات المشاوير فوراً بدون أي عمولات</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- شاشة تسجيل الراكب --- */}
+                {screen === 'passenger-login' && (
+                    <div class="screen">
+                        <button onClick={() => setScreen('user-type')} style={{background: 'none', border: 'none', color: '#0a84ff', fontWeight: 'bold', textAlign: 'right', cursor: 'pointer', marginBottom: '20px'}}>← عودة</button>
+                        <h2 style={{fontSize: '24px', color: '#1e293b', marginBottom: '8px'}}>تسجيل الراكب</h2>
+                        <p style={{color: '#64748b', fontSize: '14px', marginBottom: '30px'}}>حساب الراكب مجاني تماماً مدي الحياة داخل المنيا.</p>
+                        
+                        <form onSubmit={handlePassengerSubmit}>
+                            <label class="input-label">رقم الهاتف المحمول</label>
+                            <input class="input-field" type="tel" placeholder="01xxxxxxxxx" maxLength="11" value={phone} onChange={e => setPhone(e.target.value)} required />
+                            <button type="submit" class="btn-primary" style={{marginTop: '20px'}}>دخول واستمرار</button>
+                        </form>
+                    </div>
+                )}
+
+                {/* --- الشاشة الرئيسية للراكب --- */}
+                {screen === 'passenger-home' && (
+                    <div class="screen" style={{padding: '16px'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                            <h3 style={{color: '#1e293b'}}>أين تريد الذهاب؟</h3>
+                            <span style={{background: '#e0f2fe', color: '#0a84ff', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold'}}>راكب مجاني ✨</span>
+                        </div>
+
+                        {/* محاكاة خريطة جوجل الحية بالتحريك */}
+                        <div class="map-bg" style={{height: '180px', marginBottom: '15px'}}>
+                            <div class="map-road" style={{width: '100%', height: '20px', top: '20%'}}></div>
+                            <div class="map-road" style={{width: '20px', height: '100%', right: '50%'}}></div>
+                            <div class="car-icon" style={{top: '20%', right: '10%'}}>🚗</div>
+                            <div style={{position: 'absolute', bottom: '10px', left: '10px', background: 'white', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>🗺️ خريطة المنيا الحية تتحرك...</div>
+                        </div>
+
+                        <div style={{background: 'white', padding: '14px', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', marginBottom: '15px'}}>
+                            <label class="input-label">مكان الركوب الحالي</label>
+                            <input class="input-field" type="text" value={pickup} onChange={e => setPickup(e.target.value)} style={{marginBottom: '10px'}} />
+                            <label class="input-label">وجهة الوصول (إلى أين؟)</label>
+                            <input class="input-field" type="text" value={dropoff} onChange={e => setDropoff(e.target.value)} />
+                        </div>
+
+                        <div style={{marginBottom: '15px'}}>
+                            <label class="input-label">وسيلة الدفع للكابتن:</label>
+                            <select class="input-field" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
+                                <option value="كاش">💵 نقداً (كاش)</option>
+                                <option value="إنستاباي">⚡ إنستاباي (InstaPay)</option>
+                                <option value="فودافون كاش">🔴 فودافون كاش</option>
+                                <option value="اتصالات كاش">🟢 اتصالات كاش</option>
+                            </select>
+                        </div>
+
+                        <div style={{display: 'flex', gap: '10px', marginTop: 'auto'}}>
+                            <button onClick={() => { setRideType('اقتصادية'); setScreen('search-ride'); }} class="btn-primary" style={{backgroundColor: '#0a84ff'}}>اقتصادية (55 ج)</button>
+                            <button onClick={() => { setRideType('مريحة'); setScreen('search-ride'); }} class="btn-primary" style={{backgroundColor: '#7c3aed'}}>مريحة (75 ج)</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- شاشة البحث والمطابقة للراكب --- */}
+                {screen === 'search-ride' && (
+                    <div class="screen" style={{justifyContent: 'center', alignItems: 'center', textAlign: 'center'}}>
+                        <div style={{width: '70px', height: '70px', border: '5px solid #e2e8f0', borderTop: '5px solid #0a84ff', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px'}}></div>
+                        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+                        
+                        <h3 style={{color: '#1e293b', marginBottom: '10px'}}>جاري البحث عن كابتن قريب...</h3>
+                        <p style={{color: '#64748b', fontSize: '14px', padding: '0 20px'}}>نوع الرحلة: {rideType} - الدفع: {paymentMethod}</p>
+                        
+                        <div style={{background: 'white', padding: '16px', borderRadius: '16px', width: '100%', marginTop: '30px', border: '1px dashed #cbd5e1', textAlign: 'right'}}>
+                            <p style={{fontSize: '14px', color: '#475569'}}>📍 من: {pickup}</p>
+                            <p style={{fontSize: '14px', color: '#475569', marginTop: '5px'}}>📌 إلى: {dropoff}</p>
+                        </div>
+
+                        <button onClick={() => setScreen('passenger-home')} class="btn-outline" style={{marginTop: '40px', borderColor: '#ef4444', color: '#ef4444'}}>إلغاء طلب الرحلة</button>
+                    </div>
+                )}
+
+                {/* --- شاشة تسجيل السائق --- */}
+                {screen === 'driver-register' && (
+                    <div class="screen">
+                        <button onClick={() => setScreen('user-type')} style={{background: 'none', border: 'none', color: '#0a84ff', fontWeight: 'bold', textAlign: 'right', cursor: 'pointer', marginBottom: '15px'}}>← عودة</button>
+                        <h2 style={{fontSize: '22px', color: '#1e293b', marginBottom: '5px'}}>تسجيل السائق (الكابتن)</h2>
+                        <p style={{color: '#64748b', fontSize: '13px', marginBottom: '20px'}}>ادخل بياناتك الشخصية وبيانات مركبتك ورخصتك بدقة.</p>
+
+                        <form onSubmit={handleDriverRegisterSubmit} style={{display: 'flex', flexDirection: 'column', gap: '2px'}}>
+                            <label class="input-label">الاسم بالكامل</label>
+                            <input class="input-field" type="text" placeholder="الكابتن أحمد صلاح" value={driverName} onChange={e => setDriverName(e.target.value)} required />
+
+                            <label class="input-label">رقم الهاتف (فودافون كاش / إنستاباي)</label>
+                            <input class="input-field" type="tel" placeholder="01xxxxxxxxx" maxLength="11" value={phone} onChange={e => setPhone(e.target.value)} required />
+
+                            <div style={{display: 'flex', gap: '10px'}}>
+                                <div style={{flex: 2}}>
+                                    <label class="input-label">ماركة/نوع السيارة</label>
+                                    <input class="input-field" type="text" placeholder="تويوتا كورولا" value={carModel} onChange={e => setCarModel(e.target.value)} required />
+                                </div>
+                                <div style={{flex: 1}}>
+                                    <label class="input-label">سنة الصنع</label>
+                                    <input class="input-field" type="number" placeholder="2020" value={carYear} onChange={e => setCarYear(e.target.value)} required />
+                                </div>
+                            </div>
+
+                            <div style={{display: 'flex', gap: '10px'}}>
+                                <div style={{flex: 1}}>
+                                    <label class="input-label">لون السيارة</label>
+                                    <input class="input-field" type="text" placeholder="أبيض" value={carColor} onChange={e => setCarColor(e.target.value)} required />
+                                </div>
+                                <div style={{flex: 1}}>
+                                    <label class="input-label">رقم رخصة القيادة</label>
+                                    <input class="input-field" type="text" placeholder="658935" value={license} onChange={e => setLicense(e.target.value)} required />
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary" style={{marginTop: '15px', backgroundColor: '#10b981'}}>تسجيل الحساب والحصول على الهدية</button>
+                        </form>
+                    </div>
+                )}
+
+                {/* --- شاشة الـ 15 يوم المجانية للسائقين الجدد --- */}
+                {screen === 'driver-trial' && (
+                    <div class="screen" style={{justifyContent: 'center', textAlign: 'center', backgroundColor: '#ecfdf5'}}>
+                        <div style={{fontSize: '60px', marginBottom: '15px'}}>🎉</div>
+                        <h2 style={{color: '#065f46', fontSize: '24px', marginBottom: '10px'}}>مرحباً بك كابتن {driverName}!</h2>
+                        <p style={{color: '#047857', fontSize: '15px', lineHeight: '1.6', padding: '0 10px'}}>تهانينا! بمناسبة تسجيلك لأول مرة في تطبيق <b>Drive Plus</b>، قمنا بتفعيل فترة تجريبية مجانية لك لمدة <b>15 يوماً كاملة</b>!</p>
+                        
+                        <div style={{background: 'white', padding: '16px', borderRadius: '16px', marginTop: '25px', border: '1px solid #a7f3d0', boxShadow: '0 4px 6px rgba(0,0,0,0.02)'}}>
+                            <span style={{fontSize: '13px', color: '#64748b', display: 'block'}}>حالة الاشتراك الحالي:</span>
+                            <strong style={{fontSize: '18px', color: '#10b981', marginTop: '4px', display: 'block'}}>نشط ومجاني (باقي 15 يوم)</strong>
+                        </div>
+
+                        <div style={{marginTop: '35px', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                            <button onClick={() => setScreen('driver-home')} class="btn-primary" style={{backgroundColor: '#10b981'}}>ابدأ العمل واستقبال الرحلات مجاناً</button>
+                            <button onClick={() => setScreen('driver-pay')} class="btn-outline" style={{borderColor: '#0a84ff', color: '#0a84ff'}}>دفع الاشتراك الشهري مقدماً (50 ج)</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- شاشة دفع الاشتراك الـ 50 جنيهاً للسائقين --- */}
+                {screen === 'driver-pay' && (
+                    <div class="screen">
+                        <button onClick={() => setScreen('driver-trial')} style={{background: 'none', border: 'none', color: '#0a84ff', fontWeight: 'bold', textAlign: 'right', cursor: 'pointer', marginBottom: '10px'}}>← عودة للـ 15 يوم مجاناً</button>
+                        
+                        <div style={{textAlign: 'center', background: '#0a84ff', color: 'white', padding: '20px', borderRadius: '20px', marginBottom: '20px'}}>
+                            <span style={{fontSize: '14px', opacity: 0.9}}>اشتراك كابتن بدون عمولات</span>
+                            <h2 style={{fontSize: '32px', fontWeight: '800', marginTop: '5px'}}>50 ج.م <span style={{fontSize: '16px', fontWeight: 'normal'}}>/ شهرياً</span></h2>
+                        </div>
+
+                        <h4 style={{color: '#1e293b', marginBottom: '10px', fontSize: '15px'}}>يرجى تحويل الـ 50 جنيه إلى الرقم الموحد أدناه:</h4>
+                        
+                        <div style={{background: '#f1f5f9', padding: '14px', borderRadius: '12px', textAlign: 'center', border: '1px solid #cbd5e1', marginBottom: '20px'}}>
+                            <span style={{fontSize: '12px', color: '#64748b'}}>الرقم الحقيقي والموحد للاستلام:</span>
+                            <div style={{fontSize: '22px', fontWeight: 'bold', color: '#0f172a', marginTop: '4px', letterSpacing: '1px'}}>{targetNumber}</div>
+                        </div>
+
+                        <label class="input-label">اختر محفظتك المخصصة للدفع:</label>
+                        <div class={`pay-option ${selectedWallet === 'vodafone' ? 'selected' : ''}`} onClick={() => setSelectedWallet('vodafone')}>
+                            <span>🔴 فودافون كاش</span>
+                            <input type="radio" checked={selectedWallet === 'vodafone'} readOnly />
+                        </div>
+                        <div class={`pay-option ${selectedWallet === 'instapay' ? 'selected' : ''}`} onClick={() => setSelectedWallet('instapay')}>
+                            <span>⚡ إنستاباي (InstaPay)</span>
+                            <input type="radio" checked={selectedWallet === 'instapay'} readOnly />
+                        </div>
+                        <div class={`pay-option ${selectedWallet === 'etisalat' ? 'selected' : ''}`} onClick={() => setSelectedWallet('etisalat')}>
+                            <span>🟢 اتصالات كاش</span>
+                            <input type="radio" checked={selectedWallet === 'etisalat'} readOnly />
+                        </div>
+
+                        <form onSubmit={handlePaymentSubmit} style={{marginTop: '10px'}}>
+                            <label class="input-label">أدخل رقم محفظتك (المكون من 11 رقماً للتحقق والتوثيق):</label>
+                            <input class="input-field" type="text" maxLength="11" placeholder="01xxxxxxxxx" value={transactionId} onChange={e => setTransactionId(e.target.value)} required />
+                            <button type="submit" class="btn-primary" style={{marginTop: '10px'}}>تأكيد و تفعيل الاشتراك</button>
+                        </form>
+                    </div>
+                )}
+
+                {/* --- الشاشة الرئيسية للسائق (لوحة تحكم الكابتن) --- */}
+                {screen === 'driver-home' && (
+                    <div class="screen" style={{padding: '16px'}}>
+                        <div style={{borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                            <div>
+                                <h3 style={{margin: 0, color: '#1e293b'}}>لوحة تحكم كابتن Drive Plus</h3>
+                                <span style={{fontSize: '12px', color: '#10b981', fontWeight: '600'}}>🚗 {carColor} {carModel} ({carYear})</span>
+                            </div>
+                            <span style={{fontSize: '24px'}}>🟢</span>
+                        </div>
+
+                        <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
+                            <div style={{flex: 1, background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px', borderRadius: '12px', textAlign: 'center'}}>
+                                <span style={{fontSize: '12px', color: '#166534'}}>أرباح اليوم كاش</span>
+                                <div style={{fontSize: '20px', fontWeight: 'bold', color: '#15803d', marginTop: '2px'}}>0.00 ج.م</div>
+                            </div>
+                            <div style={{flex: 1, background: '#f0f7ff', border: '1px solid #bfdbfe', padding: '12px', borderRadius: '12px', textAlign: 'center'}}>
+                                <span style={{fontSize: '12px', color: '#1e40af'}}>حالة الاشتراك</span>
+                                <div style={{fontSize: '15px', fontWeight: 'bold', color: '#1d4ed8', marginTop: '5px'}}>مفعّل ونشط ✅</div>
+                            </div>
+                        </div>
+
+                        <h4 style={{marginBottom: '10px', color: '#1e293b'}}>طلبات المشاوير المتاحة بالمنيا الآن:</h4>
+
+                        <div style={{background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.01)'}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
+                                <span style={{background: '#eff6ff', color: '#0a84ff', padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold'}}>طلب اقتصادي</span>
+                                <strong style={{color: '#10b981', fontSize: '16px'}}>55 ج.م</strong>
+                            </div>
+                            <p style={{fontSize: '14px', color: '#475569', marginBottom: '4px'}}>📌 <b>الركوب:</b> جامعة المنيا</p>
+                            <p style={{fontSize: '14px', color: '#475569', marginBottom: '8px'}}>📍 <b>الوصول:</b> محطة أبو قرقاص</p>
+                            <p style={{fontSize: '12px', color: '#64748b'}}>💳 وسيلة الدفع المفضلة للراكب: <b style={{color: '#7c3aed'}}>إنستاباي (InstaPay)</b></p>
+                            
+                            <button onClick={() => alert('تم قبول المشوار بنجاح! جاري إرسال بيانات سيارتك ورقم هاتفك للراكب وتفعيل التتبع...')} class="btn-primary" style={{backgroundColor: '#10b981', marginTop: '12px', padding: '10px'}}>موافقة وقبول المشوار</button>
+                        </div>
+                    </div>
+                )}
+
+            </div>
+        );
+    }
+
+    const root = ScroogeReactDOM.createRoot(document.getElementById('app-container'));
+    // Fixed reference for clean execution environment mock
+    const rootRender = ReactDOM.createRoot(document.getElementById('app-container'));
+    rootRender.render(<DrivePlusApp />);
+</script>
+
+</body>
+</html>
